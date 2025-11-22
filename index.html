@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopKaro - eCommerce</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom Scrollbar for Cart */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Cart Slide Animation */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        .animate-slideInRight {
+            animation: slideInRight 0.3s ease-out forwards;
+        }
+
+        /* Toast Animation */
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+        .toast-notification {
+            animation: fadeOut 3s forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+
+    <!-- Navigation Bar -->
+    <nav class="sticky top-0 z-40 bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+               
+                <div class="flex-shrink-0 flex items-center cursor-pointer" onclick="resetFilters()">
+                    <span class="text-2xl font-bold text-indigo-600">Shop<span class="text-gray-800">Karo</span></span>
+                </div>
+
+               
+                <div class="hidden md:flex flex-1 items-center justify-center px-8">
+                    <div class="relative w-full max-w-md">
+                        <input
+                            type="text"
+                            id="desktopSearch"
+                            placeholder="Search products..."
+                            class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                            oninput="handleSearch(this.value)"
+                        />
+                        <i data-lucide="search" class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"></i>
+                    </div>
+                </div>
+
+               
+                <div class="flex items-center space-x-4">
+                    <button class="relative p-2 hover:bg-gray-100 rounded-full transition-colors" onclick="toggleCart(true)">
+                        <i data-lucide="shopping-cart" class="h-6 w-6 text-gray-700"></i>
+                        <span id="cartBadge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">0</span>
+                    </button>
+                    
+                    <button class="md:hidden p-2" onclick="toggleMobileMenu()">
+                        <i id="mobileMenuIcon" data-lucide="menu" class="h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        
+        <div id="mobileMenu" class="hidden md:hidden bg-white px-4 pt-2 pb-4 shadow-lg border-t">
+            <div class="relative mb-4">
+                <input
+                    type="text"
+                    placeholder="Search..."
+                    class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300"
+                    oninput="handleSearch(this.value)"
+                />
+                <i data-lucide="search" class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"></i>
+            </div>
+            <div class="flex flex-col space-y-2" id="mobileCategoryList">
+                
+            </div>
+        </div>
+    </nav>
+
+    
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+     
+        <div id="heroSection" class="bg-indigo-600 rounded-2xl p-8 mb-10 text-white flex flex-col md:flex-row items-center justify-between shadow-lg transition-all duration-300">
+            <div class="mb-6 md:mb-0 md:w-1/2">
+                <h1 class="text-4xl font-extrabold mb-4">Upgrade Your Lifestyle</h1>
+                <p class="text-indigo-100 text-lg mb-6">Discover the latest trends in electronics and fashion with up to 50% off.</p>
+                <button onclick="scrollToProducts()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold hover:bg-indigo-50 transition-colors">
+                    Browse Now
+                </button>
+            </div>
+            <div class="hidden md:block text-indigo-400 opacity-50">
+                 <i data-lucide="shopping-bag" class="w-40 h-40"></i>
+            </div>
+        </div>
+
+       
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6" id="products-anchor">
+            <h2 id="resultsTitle" class="text-2xl font-bold text-gray-800 mb-4 md:mb-0">All Products</h2>
+            
+            <div class="flex space-x-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto scrollbar-hide" id="categoryList">
+                
+            </div>
+        </div>
+
+     
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+           
+        </div>
+
+     
+        <div id="emptyState" class="hidden text-center py-20">
+            <p class="text-gray-500 text-xl">No products found matching your criteria.</p>
+            <button onclick="resetFilters()" class="mt-4 text-indigo-600 font-medium hover:underline">
+                Clear filters
+            </button>
+        </div>
+
+    </main>
+
+   
+    <div id="cartOverlay" class="hidden fixed inset-0 z-50 overflow-hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="toggleCart(false)"></div>
+        
+        <div class="absolute inset-y-0 right-0 max-w-md w-full flex">
+            <div class="w-full h-full bg-white shadow-xl flex flex-col transform transition-transform animate-slideInRight">
+                
+                
+                <div class="px-4 py-6 bg-gray-50 border-b flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                        Your Cart 
+                        <span id="cartCountHeader" class="text-sm font-normal text-gray-500">(0 items)</span>
+                    </h2>
+                    <button onclick="toggleCart(false)" class="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                        <i data-lucide="x" class="w-6 h-6 text-gray-500"></i>
+                    </button>
+                </div>
+
+                <div id="cartItemsContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+                    
+                </div>
+
+             
+                <div id="cartFooter" class="hidden border-t bg-gray-50 p-6 space-y-4">
+                    <div class="flex justify-between text-base font-medium text-gray-900">
+                        <p>Subtotal</p>
+                        <p id="cartTotal">₹0</p>
+                    </div>
+                    <p class="text-xs text-gray-500">Shipping and taxes calculated at checkout.</p>
+                    <button onclick="handleCheckout()" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-lg">
+                        Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+ 
+    <script>
+        
+        const PRODUCTS = [
+            { id: 1, name: "Premium Wireless Headphones", price: 2999, category: "Electronics", rating: 4.5, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80", description: "High-fidelity sound with noise cancellation." },
+            { id: 2, name: "Smart Fitness Watch", price: 1499, category: "Electronics", rating: 4.2, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80", description: "Track your health and notifications on the go." },
+            { id: 3, name: "Men's Denim Jacket", price: 2499, category: "Fashion", rating: 4.7, image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=600&q=80", description: "Classic style suitable for all seasons." },
+            { id: 4, name: "Mechanical Gaming Keyboard", price: 3999, category: "Electronics", rating: 4.8, image: "https://images.unsplash.com/photo-1587829741301-dc798b91a436?auto=format&fit=crop&w=600&q=80", description: "RGB backlit keys with tactile feedback." },
+            { id: 5, name: "Running Sneakers", price: 1999, category: "Fashion", rating: 4.3, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80", description: "Lightweight design for maximum performance." },
+            { id: 6, name: "Leather Office Bag", price: 3499, category: "Accessories", rating: 4.6, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=600&q=80", description: "Genuine leather with laptop compartment." },
+            { id: 7, name: "4K Action Camera", price: 5999, category: "Electronics", rating: 4.4, image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80", description: "Capture your adventures in stunning detail." },
+            { id: 8, name: "Sunglasses Aviator", price: 999, category: "Accessories", rating: 4.1, image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=600&q=80", description: "UV protection with a timeless look." }
+        ];
+
+        const CATEGORIES = ["All", "Electronics", "Fashion", "Accessories"];
+
+      
+        let cart = [];
+        let currentCategory = "All";
+        let searchQuery = "";
+        let isMobileMenuOpen = false;
+
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCategories();
+            renderProducts();
+            lucide.createIcons();
+        });
+
+      
+        function renderCategories() {
+            const desktopContainer = document.getElementById('categoryList');
+            const mobileContainer = document.getElementById('mobileCategoryList');
+            
+           
+            desktopContainer.innerHTML = CATEGORIES.map(cat => `
+                <button 
+                    onclick="setCategory('${cat}')"
+                    class="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${currentCategory === cat ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}"
+                >
+                    ${cat}
+                </button>
+            `).join('');
+
+           
+            mobileContainer.innerHTML = CATEGORIES.map(cat => `
+                <button 
+                    onclick="setCategory('${cat}'); toggleMobileMenu();"
+                    class="text-left px-2 py-1 rounded ${currentCategory === cat ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-gray-600'}"
+                >
+                    ${cat}
+                </button>
+            `).join('');
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            const emptyState = document.getElementById('emptyState');
+            const hero = document.getElementById('heroSection');
+            const resultsTitle = document.getElementById('resultsTitle');
+
+            // Filter logic
+            const filtered = PRODUCTS.filter(product => {
+                const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesCategory = currentCategory === "All" || product.category === currentCategory;
+                return matchesSearch && matchesCategory;
+            });
+
+            
+            if (currentCategory === "All" && !searchQuery) {
+                hero.classList.remove('hidden');
+            } else {
+                hero.classList.add('hidden');
+            }
+
+            if (searchQuery) {
+                resultsTitle.textContent = `Results for "${searchQuery}"`;
+            } else {
+                resultsTitle.textContent = `${currentCategory} Products`;
+            }
+
+            if (filtered.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } else {
+                grid.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                
+                grid.innerHTML = filtered.map(product => `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
+                        <div class="relative h-48 bg-gray-200 overflow-hidden group">
+                            <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300">
+                            <div class="absolute top-2 right-2 bg-white px-2 py-1 rounded-md text-xs font-bold flex items-center shadow-sm">
+                                <i data-lucide="star" class="w-3 h-3 text-yellow-400 mr-1 fill-current"></i>
+                                ${product.rating}
+                            </div>
+                        </div>
+                        <div class="p-4 flex flex-col flex-grow">
+                            <div class="text-xs text-indigo-600 font-semibold uppercase tracking-wide mb-1">${product.category}</div>
+                            <h3 class="text-lg font-bold text-gray-900 mb-1 leading-tight line-clamp-2">${product.name}</h3>
+                            <p class="text-gray-500 text-sm mb-4 line-clamp-2 flex-grow">${product.description}</p>
+                            <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
+                                <span class="text-xl font-bold text-gray-900">₹${product.price}</span>
+                                <button onclick="addToCart(${product.id})" class="bg-gray-900 text-white p-2 rounded-lg hover:bg-indigo-600 transition-colors flex items-center gap-2 text-sm font-medium px-4">
+                                    <i data-lucide="shopping-cart" class="w-4 h-4"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                
+                lucide.createIcons();
+            }
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItemsContainer');
+            const footer = document.getElementById('cartFooter');
+            const badge = document.getElementById('cartBadge');
+            const headerCount = document.getElementById('cartCountHeader');
+            const totalEl = document.getElementById('cartTotal');
+
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+           
+            if (totalItems > 0) {
+                badge.classList.remove('hidden');
+                badge.textContent = totalItems;
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            headerCount.textContent = `(${totalItems} items)`;
+
+            if (cart.length === 0) {
+                footer.classList.add('hidden');
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-gray-500 mt-10">
+                        <i data-lucide="shopping-cart" class="w-16 h-16 mb-4 text-gray-300"></i>
+                        <p class="text-lg font-medium">Your cart is empty</p>
+                        <p class="text-sm mb-6">Looks like you haven't added anything yet.</p>
+                        <button onclick="toggleCart(false)" class="bg-indigo-600 text-white px-6 py-2 rounded-full font-medium hover:bg-indigo-700">
+                            Start Shopping
+                        </button>
+                    </div>
+                `;
+            } else {
+                footer.classList.remove('hidden');
+                totalEl.textContent = `₹${totalPrice}`;
+                
+                container.innerHTML = cart.map(item => `
+                    <div class="flex gap-4 bg-white border rounded-lg p-3 shadow-sm">
+                        <div class="w-20 h-20 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                            <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" />
+                        </div>
+                        <div class="flex-1 flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 line-clamp-1">${item.name}</h3>
+                                <p class="text-gray-500 text-sm">${item.category}</p>
+                            </div>
+                            <div class="flex justify-between items-center mt-2">
+                                <div class="flex items-center border rounded-md">
+                                    <button onclick="updateQuantity(${item.id}, -1)" class="p-1 hover:bg-gray-100 text-gray-600">
+                                        <i data-lucide="minus" class="w-4 h-4"></i>
+                                    </button>
+                                    <span class="px-3 text-sm font-medium">${item.quantity}</span>
+                                    <button onclick="updateQuantity(${item.id}, 1)" class="p-1 hover:bg-gray-100 text-gray-600">
+                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-gray-900">₹${item.price * item.quantity}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="removeFromCart(${item.id})" class="text-gray-400 hover:text-red-500 self-start p-1">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        }
+
+      
+        function setCategory(cat) {
+            currentCategory = cat;
+            renderCategories(); 
+            renderProducts();
+        }
+
+        function handleSearch(query) {
+            searchQuery = query;
+            renderProducts();
+        }
+
+        function resetFilters() {
+            searchQuery = "";
+            currentCategory = "All";
+            document.getElementById('desktopSearch').value = "";
+            renderCategories();
+            renderProducts();
+        }
+
+        function scrollToProducts() {
+            document.getElementById('products-anchor').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const icon = document.getElementById('mobileMenuIcon');
+            isMobileMenuOpen = !isMobileMenuOpen;
+            
+            if (isMobileMenuOpen) {
+                menu.classList.remove('hidden');
+                icon.setAttribute('data-lucide', 'x');
+            } else {
+                menu.classList.add('hidden');
+                icon.setAttribute('data-lucide', 'menu');
+            }
+            lucide.createIcons();
+        }
+
+        function toggleCart(show) {
+            const cartOverlay = document.getElementById('cartOverlay');
+            if (show) {
+                cartOverlay.classList.remove('hidden');
+            } else {
+                cartOverlay.classList.add('hidden');
+            }
+        }
+
+  
+        function addToCart(productId) {
+            const product = PRODUCTS.find(p => p.id === productId);
+            const existingItem = cart.find(item => item.id === productId);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...product, quantity: 1 });
+            }
+            
+            renderCart();
+            toggleCart(true);
+            showToast(`Added ${product.name} to cart`);
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(item => item.id !== id);
+            renderCart();
+        }
+
+        function updateQuantity(id, change) {
+            const item = cart.find(i => i.id === id);
+            if (item) {
+                const newQty = item.quantity + change;
+                if (newQty > 0) {
+                    item.quantity = newQty;
+                }
+                
+            }
+            renderCart();
+        }
+
+        function handleCheckout() {
+            if (cart.length === 0) return;
+            showToast("Proceeding to checkout...");
+          
+            setTimeout(() => {
+                cart = [];
+                renderCart();
+                toggleCart(false);
+                showToast("Order placed successfully! (Mock)");
+            }, 1500);
+        }
+
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm flex items-center gap-2 toast-notification';
+            toast.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i> ${message}`;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+    </script>
+</body>
+</html>
